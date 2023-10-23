@@ -1,1 +1,2 @@
-pub mod collection;
+mod collection;
+mod config;
