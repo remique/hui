@@ -86,6 +86,28 @@ impl Collections {
 
         Some(current_collections)
     }
+
+    // We only need to obtain the reference to Request and then use it somewhere else in `App`
+    pub fn get_request(&self, collection_path: &str, request_name: &str) -> Option<&Request> {
+        let col = self.find_collection(collection_path);
+
+        if let Some(c) = col {
+            for item in c {
+                match item {
+                    CollectionOrRequest::Request(r) => {
+                        if r.name == request_name {
+                            return Some(r);
+                        }
+                    }
+                    _ => {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        None
+    }
 }
 
 #[test]
@@ -210,4 +232,53 @@ fn test_correct_get_by_path() {
 
     let after = Collections::from_str(raw_input_after).unwrap();
     assert_eq!(modify, after);
+}
+
+#[test]
+fn test_get_request() {
+    let raw_input = r#"
+    Collections( 
+        collections: [
+            Request(
+                Request (
+                    url: "localhost:3000", 
+                    method: "GET", 
+                    name: "getFirst" 
+                ),
+            ),
+            Collection(
+                Collection (
+                    name: "firstCollection",
+                    fields: [
+                        Collection (
+                            Collection (
+                                name: "secondCollection",
+                                fields: [
+                                    Request (
+                                        Request (
+                                            url: "localhost:1234", 
+                                            method: "POST", 
+                                            name: "getThird" 
+                                        )
+                                    )
+                                ]
+                            )
+                        )
+                    ]
+                )
+            )
+        ] 
+    )
+    "#;
+
+    let c = Collections::from_str(raw_input).unwrap();
+    let req = c.get_request("firstCollection/secondCollection", "getThird");
+
+    let expected = Request {
+        url: "localhost:1234".to_string(),
+        method: "POST".to_string(),
+        name: "getThird".to_string(),
+    };
+
+    assert_eq!(req, Some(&expected));
 }
